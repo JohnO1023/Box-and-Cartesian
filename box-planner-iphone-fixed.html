@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Box Planner">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d12">
+<title>Box & Cartesian Planner v2</title>
+
+<!-- PWA Icon (inline SVG as data URI — works for add-to-home) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%230b0d12'/%3E%3Crect x='28' y='28' width='124' height='124' rx='4' fill='none' stroke='%2300e5ff' stroke-width='4'/%3E%3Cline x1='28' y1='90' x2='152' y2='90' stroke='%2300e5ff' stroke-width='1.5' stroke-dasharray='5,4' opacity='.4'/%3E%3Cline x1='90' y1='28' x2='90' y2='152' stroke='%2300e5ff' stroke-width='1.5' stroke-dasharray='5,4' opacity='.4'/%3E%3Ccircle cx='90' cy='90' r='7' fill='%2322d3a0'/%3E%3Ccircle cx='55' cy='65' r='5' fill='%23ff6b35'/%3E%3Ccircle cx='128' cy='118' r='5' fill='%23a78bfa'/%3E%3Cline x1='28' y1='28' x2='46' y2='28' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='28' y1='28' x2='28' y2='46' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='152' y1='28' x2='134' y2='28' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='152' y1='28' x2='152' y2='46' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='28' y1='152' x2='46' y2='152' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='28' y1='152' x2='28' y2='134' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='152' y1='152' x2='134' y2='152' stroke='%23ff6b35' stroke-width='3.5'/%3E%3Cline x1='152' y1='152' x2='152' y2='134' stroke='%23ff6b35' stroke-width='3.5'/%3E%3C/svg%3E">
+
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0b0d12;
+  --panel: #12151d;
+  --panel2: #181c27;
+  --border: #252a3a;
+  --accent: #00e5ff;
+  --accent2: #ff6b35;
+  --purple: #a78bfa;
+  --green: #22d3a0;
+  --yellow: #fbbf24;
+  --text: #e2e8f0;
+  --muted: #5a6480;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  /* safe areas */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  height: 100dvh;
+  overflow: hidden;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ── APP SHELL ── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-top: var(--sat);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+/* ── HEADER ── */
+header {
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11,13,18,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+header h1 {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+}
+header h1 span { color: var(--accent); }
+
+.header-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+/* Step badges in header */
+.steps { display: flex; gap: 0.3rem; }
+.sbadge {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  padding: 0.15rem 0.45rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.sbadge.done  { border-color: var(--green);  color: var(--green); }
+.sbadge.active{ border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.07); }
+
+/* ── SCROLL AREA ── */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── TAB BAR ── */
+.tab-bar {
+  flex-shrink: 0;
+  display: flex;
+  background: rgba(18,21,29,0.97);
+  border-top: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding-bottom: var(--sab);
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  padding: 0.65rem 0.25rem 0.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.15s;
+  position: relative;
+}
+.tab-btn svg { width: 20px; height: 20px; }
+.tab-btn.active { color: var(--accent); }
+.tab-btn.done   { color: var(--green); }
+.tab-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+  border-radius: 0 0 2px 2px;
+}
+.tab-btn.active::before { transform: scaleX(1); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 1rem; }
+.page.visible { display: block; }
+
+/* ── SECTIONS ── */
+.section {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.section-head {
+  padding: 0.55rem 1rem;
+  background: rgba(0,229,255,0.04);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-body { padding: 1rem; }
+
+/* ── FORM ELEMENTS ── */
+.field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+.field:last-child { margin-bottom: 0; }
+
+label.lbl {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* font-size 16px prevents iOS zoom on focus */
+input[type=number], input[type=text], select, textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px; /* critical: prevents iOS zoom */
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,229,255,0.08);
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6480' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+}
+
+textarea { resize: none; min-height: 60px; font-size: 16px; line-height: 1.4; }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+
+/* unit pills */
+.unit-pills { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.upill {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 44px;
+  min-height: 44px;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.upill.on { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.07); }
+
+/* buttons */
+.btn {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px; /* iOS tap target */
+  -webkit-appearance: none;
+}
+.btn:active { opacity: 0.8; transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: #0b0d12; }
+.btn-orange  { background: var(--accent2); color: #fff; }
+.btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-danger  { background: transparent; border: 1px solid #ef4444; color: #ef4444; }
+.btn-purple  { background: var(--purple); color: #fff; }
+.btn-green   { background: var(--green); color: #0b0d12; }
+.btn-sm      { padding: 0.45rem 0.8rem; font-size: 0.72rem; min-height: 36px; }
+.btn-full    { width: 100%; justify-content: center; }
+
+/* ── CANVAS PAGE ── */
+#canvasPage {
+  padding: 0.75rem;
+}
+
+#boxCanvas {
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 100%;
+  cursor: crosshair;
+  background: #0b0d12;
+  touch-action: none; /* handle touch manually */
+}
+
+/* ── STATS ROW ── */
+.statrow {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.stat { flex: 1; min-width: 60px; background: var(--panel2); padding: 0.4rem 0.5rem; text-align: center; }
+.stat .slabel { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.stat .sval   { font-family: var(--mono); font-size: 0.8rem; color: var(--accent); margin-top: 0.1rem; }
+
+/* ── MARKS LIST ── */
+.mark-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.mark-item:last-child { margin-bottom: 0; }
+.mark-item.selected { border-color: var(--accent); background: rgba(0,229,255,0.05); }
+
+.mark-item-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+.mark-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.mark-label { font-family: var(--mono); font-size: 0.82rem; font-weight: 600; flex: 1; }
+.mark-coords { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.mark-note { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; font-style: italic; white-space: pre-wrap; word-break: break-word; }
+
+.mark-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 6px;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+.mark-del:active { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+/* color swatches */
+.color-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.cswatch {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  min-width: 44px;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+}
+.cswatch:active { transform: scale(1.2); }
+.cswatch.on { border-color: #fff; transform: scale(1.15); }
+
+/* divider */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0.6rem 0; }
+
+/* empty state */
+.empty { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 1.5rem 0; font-family: var(--mono); }
+
+/* hint text */
+.hint { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); text-align: center; margin-top: 0.4rem; }
+
+/* disabled overlay */
+.locked { opacity: 0.4; pointer-events: none; }
+
+/* ── INSTALL BANNER ── */
+#installBanner {
+  display: none;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(167,139,250,0.08));
+  border: 1px solid rgba(0,229,255,0.25);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+.install-title { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }
+.install-steps { font-size: 0.78rem; color: var(--text); line-height: 1.6; }
+.install-steps b { color: var(--accent); }
+.install-close {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+/* ── PRINT ── */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff !important; background-image: none !important; color: #000 !important; overflow: visible; height: auto; }
+  .app-shell { height: auto; overflow: visible; }
+  .scroll-area { overflow: visible; }
+  .tab-bar, header .header-actions, #installBanner { display: none !important; }
+  .page { display: block !important; }
+  #canvasPage { padding: 0; }
+  .no-print { display: none !important; }
+  #boxCanvas { border: 1.5px solid #555; width: 100% !important; max-width: 100%; filter: invert(1) hue-rotate(180deg); }
+  .print-marks-table { display: block !important; }
+  .section { border: 1px solid #bbb; page-break-inside: avoid; background: #fff !important; }
+  .section-head { background: #eee !important; color: #222 !important; }
+}
+
+.print-marks-table { display: none; }
+.print-marks-table table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.5rem; }
+.print-marks-table th, .print-marks-table td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+.print-marks-table th { background: #f0f0f0; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div style="display:flex;align-items:center;gap:0.75rem;min-width:0">
+    <h1>Box <span>&</span> Planner <span style="color:var(--muted);font-weight:300;font-size:0.8rem">v2</span></h1>
+    <div class="steps">
+      <span class="sbadge active" id="sb1">01</span>
+      <span class="sbadge" id="sb2">02</span>
+      <span class="sbadge" id="sb3">03</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm no-print" onclick="resetAll()">↺</button>
+    <button class="btn btn-purple btn-sm no-print" id="printBtn" onclick="triggerPrint()" disabled>⎙ Print</button>
+  </div>
+</header>
+
+<!-- ══ SCROLL AREA ══ -->
+<div class="scroll-area" id="scrollArea">
+
+  <!-- PAGE: BOX (tab 1) -->
+  <div class="page visible" id="page-box">
+    <div id="installBanner">
+      <button class="install-close" onclick="dismissInstall()">×</button>
+      <div class="install-title">📲 Add to Home Screen</div>
+      <div class="install-steps">
+        <b>To get a tap icon on your home screen (Safari only):</b><br>
+        1. Tap the <b>Share ↑</b> button at the bottom of Safari<br>
+        2. Scroll down and tap <b>"Add to Home Screen"</b><br>
+        3. Edit the name if desired, then tap <b>Add</b><br><br>
+        <span style="color:var(--muted);font-size:0.72rem">⚠️ Must be opened from Safari — not Chrome or Firefox.<br>Once installed, open from your home screen for the full app experience (no browser bar, full screen).</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">01 — Box Dimensions</div>
+      <div class="section-body">
+        <div class="row2">
+          <div class="field">
+            <label class="lbl" style="color:#00e5ff">▲ Top</label>
+            <input type="number" id="top" placeholder="200" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label class="lbl" style="color:#ff6b35">▼ Bottom</label>
+            <input type="number" id="bottom" placeholder="200" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label class="lbl" style="color:#22d3a0">◀ Left</label>
+            <input type="number" id="left" placeholder="150" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label class="lbl" style="color:#a78bfa">▶ Right</label>
+            <input type="number" id="right" placeholder="150" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+        </div>
+        <div class="field" style="margin-top:0.25rem">
+          <label class="lbl">Units</label>
+          <div class="unit-pills">
+            <button type="button" class="upill on" onclick="selUnit(this,'px')">px</button>
+            <button type="button" class="upill" onclick="selUnit(this,'cm')">cm</button>
+            <button type="button" class="upill" onclick="selUnit(this,'in')">in</button>
+            <button type="button" class="upill" onclick="selUnit(this,'m')">m</button>
+            <button type="button" class="upill" onclick="selUnit(this,'ft')">ft</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" style="margin-top:0.75rem" onclick="drawBox()">Draw Box →</button>
+      </div>
+    </div>
+
+    <!-- Stats (shows after box drawn) -->
+    <div class="statrow no-print" id="statsRow" style="display:none">
+      <div class="stat"><div class="slabel">Top</div><div class="sval" id="st-top">—</div></div>
+      <div class="stat"><div class="slabel">Bot</div><div class="sval" id="st-bot">—</div></div>
+      <div class="stat"><div class="slabel">Left</div><div class="sval" id="st-left">—</div></div>
+      <div class="stat"><div class="slabel">Right</div><div class="sval" id="st-right">—</div></div>
+      <div class="stat"><div class="slabel">Perim</div><div class="sval" id="st-perim">—</div></div>
+      <div class="stat"><div class="slabel">Grid</div><div class="sval" id="st-grid">—</div></div>
+      <div class="stat"><div class="slabel">Marks</div><div class="sval" id="st-marks">0</div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: GRID (tab 2) -->
+  <div class="page" id="page-grid">
+    <div class="section locked" id="gridSection">
+      <div class="section-head">02 — Cartesian Grid</div>
+      <div class="section-body">
+        <div class="field">
+          <label class="lbl">N × N Planes</label>
+          <input type="number" id="planesInput" value="4" min="1" max="60" inputmode="numeric">
+        </div>
+        <button class="btn btn-orange btn-full" onclick="applyGrid()">Apply Grid →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: CANVAS (tab 3) -->
+  <div class="page" id="canvasPage">
+    <canvas id="boxCanvas"></canvas>
+
+    <!-- Print: marks table -->
+    <div class="print-marks-table section" id="printTable" style="margin-top:1rem">
+      <div class="section-head">Mark Reference Table</div>
+      <div class="section-body">
+        <table id="marksTable">
+          <thead><tr><th>#</th><th>Label</th><th>X</th><th>Y</th><th>Diameter</th><th>Note</th></tr></thead>
+          <tbody id="marksTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: MARKS (tab 4) -->
+  <div class="page" id="page-marks">
+    <div class="section locked" id="markSection">
+      <div class="section-head">03 — Add Mark</div>
+      <div class="section-body">
+        <div class="row2">
+          <div class="field">
+            <label class="lbl">X coordinate</label>
+            <input type="number" id="mx" placeholder="0.00" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label class="lbl">Y coordinate</label>
+            <input type="number" id="my" placeholder="0.00" step="0.01" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Diameter (¼ increments)</label>
+          <select id="mdiam">
+            <option value="0">None</option>
+            <option value="0.25">0.25</option><option value="0.5">0.50</option>
+            <option value="0.75">0.75</option><option value="1">1.00</option>
+            <option value="1.25">1.25</option><option value="1.5">1.50</option>
+            <option value="1.75">1.75</option><option value="2">2.00</option>
+            <option value="2.25">2.25</option><option value="2.5">2.50</option>
+            <option value="2.75">2.75</option><option value="3">3.00</option>
+            <option value="4">4.00</option><option value="5">5.00</option>
+            <option value="6">6.00</option><option value="8">8.00</option>
+            <option value="10">10.00</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Mark Color</label>
+          <div class="color-row" id="colorPicker">
+            <button type="button" class="cswatch on"  style="background:#00e5ff" data-color="#00e5ff" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#ff6b35" data-color="#ff6b35" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#22d3a0" data-color="#22d3a0" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#fbbf24" data-color="#fbbf24" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#a78bfa" data-color="#a78bfa" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#f472b6" data-color="#f472b6" onclick="selColor(this)"></button>
+            <button type="button" class="cswatch"     style="background:#fff"    data-color="#ffffff" onclick="selColor(this)"></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="lbl">Note / Label</label>
+          <textarea id="mnote" placeholder="Add a note for this mark…"></textarea>
+        </div>
+
+        <button class="btn btn-green btn-full" onclick="addMark()">+ Add Mark</button>
+        <p class="hint">— or tap directly on the canvas —</p>
+      </div>
+    </div>
+
+    <!-- Marks list -->
+    <div class="section locked" id="marksListSection">
+      <div class="section-head">
+        <span>Placed Marks</span>
+        <span id="markCount" style="color:var(--muted)">0 placed</span>
+      </div>
+      <div class="section-body" id="marksList">
+        <p class="empty">No marks yet.</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- ══ TAB BAR ══ -->
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tab-box" onclick="switchTab('box')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+    </svg>
+    BOX
+  </button>
+  <button class="tab-btn" id="tab-grid" onclick="switchTab('grid')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/>
+      <line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
+    </svg>
+    GRID
+  </button>
+  <button class="tab-btn" id="tab-canvas" onclick="switchTab('canvas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="12" y1="3" x2="12" y2="21"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+    </svg>
+    VIEW
+  </button>
+  <button class="tab-btn" id="tab-marks" onclick="switchTab('marks')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <circle cx="12" cy="10" r="3"/>
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+    </svg>
+    MARKS
+  </button>
+</nav>
+
+</div><!-- /app-shell -->
+
+<script>
+// ── STATE ──
+let unit = 'px';
+let box = null;
+let grid = 0;
+let marks = [];
+let selColor_ = '#00e5ff';
+let markCounter = 0;
+let selectedMark = null;
+let CV = { ox:0, oy:0, bw:0, bh:0, scale:1 };
+const PADDING = 60;
+
+// ── TABS ──
+function switchTab(tab) {
+  ['box','grid','canvas','marks'].forEach(t => {
+    document.getElementById('tab-' + t)?.classList.remove('active');
+    const pageId = t === 'canvas' ? 'canvasPage' : 'page-' + t;
+    document.getElementById(pageId)?.classList.remove('visible');
+  });
+
+  document.getElementById('tab-' + tab)?.classList.add('active');
+  const pageId = tab === 'canvas' ? 'canvasPage' : 'page-' + tab;
+  document.getElementById(pageId)?.classList.add('visible');
+
+  // reset scroll
+  document.getElementById('scrollArea').scrollTop = 0;
+
+  // render canvas when switching to view tab
+  if (tab === 'canvas' && box) {
+    setTimeout(renderCanvas, 50);
+  }
+}
+
+// ── INSTALL BANNER ──
+// Show on iOS, not in standalone mode
+function checkInstall() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const dismissed = localStorage.getItem('installDismissed');
+  if (isIOS && !isStandalone && !dismissed) {
+    const banner = document.getElementById('installBanner');
+    banner.style.display = 'block';
+    if (!isSafari) {
+      // Chrome/Firefox on iOS can't install PWAs — tell them to use Safari
+      banner.querySelector('.install-steps').innerHTML =
+        '<b style="color:var(--accent2)">Open this page in Safari to add it to your Home Screen.</b><br>' +
+        '<span style="color:var(--muted);font-size:0.72rem">Chrome and Firefox on iPhone cannot install web apps. Copy the URL and paste it into Safari.</span>';
+    }
+  }
+}
+document.querySelector('.install-close').addEventListener('click', dismissInstall);
+function dismissInstall() {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem('installDismissed', '1');
+}
+checkInstall();
+
+// ── UNIT ──
+function selUnit(el, u) {
+  document.querySelectorAll('.upill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  unit = u;
+}
+
+// ── COLOR ──
+function selColor(el) {
+  document.querySelectorAll('.cswatch').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  selColor_ = el.dataset.color;
+}
+
+// ── STEP BADGES ──
+function setStep(n) {
+  ['sb1','sb2','sb3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.className = 'sbadge' + (i+1 < n ? ' done' : i+1 === n ? ' active' : '');
+  });
+  // update tab done states
+  if (n >= 2) document.getElementById('tab-grid')?.classList.add('done');
+  if (n >= 3) { document.getElementById('tab-marks')?.classList.add('done'); document.getElementById('tab-canvas')?.classList.add('done'); }
+}
+
+// ── LOCK / UNLOCK ──
+function unlock(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('locked'); }
+}
+
+// ── DRAW BOX ──
+function drawBox() {
+  const t = parseFloat(document.getElementById('top').value);
+  const b = parseFloat(document.getElementById('bottom').value);
+  const l = parseFloat(document.getElementById('left').value);
+  const r = parseFloat(document.getElementById('right').value);
+  if ([t,b,l,r].some(v => isNaN(v) || v <= 0)) {
+    alert('Enter positive values for all four sides.'); return;
+  }
+  box = { top:t, bottom:b, left:l, right:r };
+  marks = []; markCounter = 0; grid = 0;
+
+  document.getElementById('statsRow').style.display = 'flex';
+  document.getElementById('st-top').textContent    = t + ' ' + unit;
+  document.getElementById('st-bot').textContent    = b + ' ' + unit;
+  document.getElementById('st-left').textContent   = l + ' ' + unit;
+  document.getElementById('st-right').textContent  = r + ' ' + unit;
+  document.getElementById('st-perim').textContent  = (t+b+l+r) + ' ' + unit;
+  document.getElementById('st-grid').textContent   = '—';
+  document.getElementById('st-marks').textContent  = '0';
+
+  unlock('gridSection');
+  setStep(2);
+
+  // auto-navigate to grid tab
+  switchTab('grid');
+}
+
+// ── GRID ──
+function applyGrid() {
+  const n = parseInt(document.getElementById('planesInput').value);
+  if (isNaN(n) || n < 1) { alert('Enter a number ≥ 1'); return; }
+  grid = n;
+  document.getElementById('st-grid').textContent = n + '×' + n;
+  unlock('markSection');
+  unlock('marksListSection');
+  document.getElementById('printBtn').disabled = false;
+  setStep(3);
+  renderCanvas();
+  // auto-navigate to canvas tab
+  switchTab('canvas');
+}
+
+// ── ADD MARK ──
+function addMark(clickX, clickY) {
+  let bx, by;
+  if (clickX !== undefined) {
+    bx = ((clickX - CV.ox) / CV.bw) * avgW();
+    by = ((CV.oy + CV.bh - clickY) / CV.bh) * avgH();
+    bx = Math.round(bx * 100) / 100;
+    by = Math.round(by * 100) / 100;
+    bx = Math.max(0, Math.min(avgW(), bx));
+    by = Math.max(0, Math.min(avgH(), by));
+    document.getElementById('mx').value = bx;
+    document.getElementById('my').value = by;
+  } else {
+    bx = parseFloat(document.getElementById('mx').value);
+    by = parseFloat(document.getElementById('my').value);
+    if (isNaN(bx) || isNaN(by)) { alert('Enter X and Y coordinates.'); return; }
+    bx = Math.round(bx * 100) / 100;
+    by = Math.round(by * 100) / 100;
+  }
+
+  const diam = parseFloat(document.getElementById('mdiam').value) || 0;
+  const note = document.getElementById('mnote').value.trim();
+  markCounter++;
+
+  marks.push({ id: markCounter, label: 'P' + markCounter, x: bx, y: by, diam, color: selColor_, note });
+
+  document.getElementById('mx').value = '';
+  document.getElementById('my').value = '';
+  document.getElementById('mnote').value = '';
+
+  updateMarksList();
+  updateMarkStats();
+  renderCanvas();
+}
+
+function deleteMark(id) {
+  marks = marks.filter(m => m.id !== id);
+  if (selectedMark === id) selectedMark = null;
+  updateMarksList();
+  updateMarkStats();
+  renderCanvas();
+}
+
+function selectMark(id) {
+  selectedMark = selectedMark === id ? null : id;
+  updateMarksList();
+  renderCanvas();
+}
+
+function updateMarkStats() {
+  document.getElementById('st-marks').textContent = marks.length;
+  document.getElementById('markCount').textContent = marks.length + ' placed';
+}
+
+function updateMarksList() {
+  const container = document.getElementById('marksList');
+  const tbody = document.getElementById('marksTableBody');
+  tbody.innerHTML = '';
+
+  if (marks.length === 0) {
+    container.innerHTML = '<p class="empty">No marks yet.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  marks.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'mark-item' + (selectedMark === m.id ? ' selected' : '');
+    div.onclick = () => selectMark(m.id);
+    div.innerHTML = `
+      <div class="mark-item-top">
+        <div class="mark-dot" style="background:${m.color}"></div>
+        <span class="mark-label">${m.label}</span>
+        <span class="mark-coords">(${m.x}, ${m.y})</span>
+        <button class="mark-del" onclick="event.stopPropagation();deleteMark(${m.id})" title="Delete">×</button>
+      </div>
+      <div class="mark-coords" style="margin-left:18px">⌀ ${m.diam > 0 ? m.diam + ' ' + unit : 'none'}</div>
+      ${m.note ? `<div class="mark-note">${escHtml(m.note)}</div>` : ''}
+    `;
+    container.appendChild(div);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${m.id}</td><td>${m.label}</td><td>${m.x}</td><td>${m.y}</td><td>${m.diam > 0 ? m.diam + ' ' + unit : '—'}</td><td>${escHtml(m.note)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── CANVAS ──
+function avgW() { return (box.top + box.bottom) / 2; }
+function avgH() { return (box.left + box.right) / 2; }
+
+function renderCanvas() {
+  if (!box) return;
+  const canvas = document.getElementById('boxCanvas');
+  const parent = canvas.parentElement;
+
+  const W = parent.clientWidth - 24;
+  const MAX_H = window.innerHeight * 0.60;
+
+  const aw = avgW(), ah = avgH();
+  const scaleX = (W - PADDING*2) / aw;
+  const scaleY = (MAX_H - PADDING*2) / ah;
+  const scale  = Math.min(scaleX, scaleY, 4);
+
+  const bw = aw * scale;
+  const bh = ah * scale;
+  const CW = Math.max(W, bw + PADDING*2);
+  const CH = bh + PADDING*2 + 48;
+
+  // Pixel ratio for sharp canvas on retina
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = CW * dpr;
+  canvas.height = CH * dpr;
+  canvas.style.width  = CW + 'px';
+  canvas.style.height = CH + 'px';
+
+  CV = { ox: (CW - bw)/2, oy: PADDING, bw, bh, scale };
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // BACKGROUND
+  ctx.fillStyle = '#0b0d12';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // GRID
+  if (grid > 0) {
+    const cw = bw / grid, ch = bh / grid;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(CV.ox, CV.oy, bw, bh); ctx.clip();
+
+    for (let row = 0; row < grid; row++) {
+      for (let col = 0; col < grid; col++) {
+        ctx.fillStyle = (row+col)%2===0 ? 'rgba(0,229,255,0.04)' : 'rgba(255,107,53,0.04)';
+        ctx.fillRect(CV.ox + col*cw, CV.oy + row*ch, cw, ch);
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(0,229,255,0.22)';
+    ctx.lineWidth = 0.7;
+    ctx.setLineDash([5,4]);
+    for (let i = 1; i < grid; i++) {
+      ctx.beginPath(); ctx.moveTo(CV.ox+i*cw, CV.oy); ctx.lineTo(CV.ox+i*cw, CV.oy+bh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(CV.ox, CV.oy+i*ch); ctx.lineTo(CV.ox+bw, CV.oy+i*ch); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    const fz = Math.min(9, cw*0.28, ch*0.28);
+    if (fz >= 5 && cw > 20 && ch > 14) {
+      ctx.font = `${fz}px Share Tech Mono, monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(0,229,255,0.38)';
+      for (let row = 0; row < grid; row++)
+        for (let col = 0; col < grid; col++)
+          ctx.fillText(`(${col},${grid-1-row})`, CV.ox+col*cw+cw/2, CV.oy+row*ch+ch/2);
+    }
+    ctx.restore();
+  }
+
+  // BOX OUTLINE
+  ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 20;
+  ctx.strokeStyle = 'rgba(0,229,255,0.25)'; ctx.lineWidth = 8;
+  ctx.strokeRect(CV.ox, CV.oy, bw, bh);
+  ctx.shadowBlur = 6;
+  ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 3;
+  ctx.strokeRect(CV.ox, CV.oy, bw, bh);
+  ctx.shadowBlur = 0;
+
+  // CORNER BRACKETS
+  const cLen = 18;
+  [[CV.ox,CV.oy,1,1],[CV.ox+bw,CV.oy,-1,1],[CV.ox,CV.oy+bh,1,-1],[CV.ox+bw,CV.oy+bh,-1,-1]]
+    .forEach(([x,y,dx,dy]) => {
+      ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 3;
+      ctx.shadowColor = '#ff6b35'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx*cLen,y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+dy*cLen); ctx.stroke();
+    });
+  ctx.shadowBlur = 0;
+
+  // AXIS TICKS & LABELS
+  const xTicks = grid > 0 ? grid : Math.min(8, Math.max(4, Math.floor(bw/60)));
+  const yTicks = grid > 0 ? grid : Math.min(8, Math.max(4, Math.floor(bh/50)));
+  const tickLen = 5;
+  const tickColor = 'rgba(255,255,255,0.75)';
+  const axisColor = 'rgba(255,255,255,0.9)';
+  const axisFont  = '10px Share Tech Mono, monospace';
+
+  ctx.strokeStyle = tickColor;
+  ctx.fillStyle   = axisColor;
+  ctx.font        = axisFont;
+  ctx.lineWidth   = 1;
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let i = 0; i <= xTicks; i++) {
+    const px = CV.ox + (i / xTicks) * bw;
+    const val = ((i / xTicks) * avgW());
+    const label = Number.isInteger(val) ? val : val.toFixed(1);
+    ctx.beginPath(); ctx.moveTo(px, CV.oy+bh); ctx.lineTo(px, CV.oy+bh+tickLen); ctx.stroke();
+    ctx.fillText(label, px, CV.oy+bh+tickLen+2);
+  }
+  ctx.font = 'bold 10px Share Tech Mono, monospace';
+  ctx.fillStyle = '#00e5ff';
+  ctx.fillText(`X (${unit})`, CV.ox + bw/2, CV.oy + bh + tickLen + 14);
+
+  ctx.font        = axisFont;
+  ctx.fillStyle   = axisColor;
+  ctx.strokeStyle = tickColor;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= yTicks; i++) {
+    const py  = CV.oy + bh - (i / yTicks) * bh;
+    const val = (i / yTicks) * avgH();
+    const label = Number.isInteger(val) ? val : val.toFixed(1);
+    ctx.beginPath(); ctx.moveTo(CV.ox, py); ctx.lineTo(CV.ox-tickLen, py); ctx.stroke();
+    ctx.fillText(label, CV.ox-tickLen-4, py);
+  }
+  ctx.save();
+  ctx.translate(CV.ox - 42, CV.oy + bh/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.font = 'bold 10px Share Tech Mono, monospace';
+  ctx.fillStyle = '#22d3a0';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`Y (${unit})`, 0, 0);
+  ctx.restore();
+
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillText('(0,0)', CV.ox - tickLen - 2, CV.oy + bh + tickLen + 2);
+
+  // SIDE DIMENSION LABELS
+  ctx.font = '10px Share Tech Mono, monospace';
+  ctx.fillStyle = '#00e5ff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`top: ${box.top} ${unit}`, CV.ox+bw/2, CV.oy - 24);
+
+  ctx.fillStyle = '#ff6b35';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`bottom: ${box.bottom} ${unit}`, CV.ox+bw/2, CV.oy+bh + tickLen + 30);
+
+  ctx.save();
+  ctx.translate(CV.ox - 52, CV.oy + bh/2); ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'bottom'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#22d3a0';
+  ctx.fillText(`left: ${box.left} ${unit}`, 0, 0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(CV.ox+bw + 12, CV.oy+bh/2); ctx.rotate(Math.PI/2);
+  ctx.textBaseline = 'bottom'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#a78bfa';
+  ctx.fillText(`right: ${box.right} ${unit}`, 0, 0);
+  ctx.restore();
+
+  // MARKS
+  marks.forEach(m => {
+    const px = CV.ox + (m.x / avgW()) * bw;
+    const py = CV.oy + bh - (m.y / avgH()) * bh;
+    const isSel = selectedMark === m.id;
+    const r_dot = isSel ? 8 : 6;
+
+    ctx.save();
+
+    if (m.diam > 0) {
+      const r_circ = (m.diam / 2) * scale;
+      ctx.beginPath(); ctx.arc(px, py, r_circ, 0, Math.PI*2);
+      ctx.globalAlpha = 0.12; ctx.fillStyle = m.color; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.arc(px, py, r_circ, 0, Math.PI*2);
+      ctx.strokeStyle = m.color; ctx.lineWidth = isSel ? 2.5 : 1.8;
+      ctx.setLineDash([5,3]);
+      ctx.shadowColor = m.color; ctx.shadowBlur = 6;
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.shadowBlur = 0;
+      ctx.font = 'bold 10px Share Tech Mono, monospace';
+      ctx.fillStyle = m.color;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText('⌀' + m.diam, px + r_circ + 4, py - 2);
+    }
+
+    const chLen = isSel ? 14 : 10;
+    ctx.strokeStyle = m.color; ctx.lineWidth = isSel ? 2.2 : 1.6;
+    ctx.shadowColor = m.color; ctx.shadowBlur = isSel ? 8 : 4;
+    ctx.beginPath(); ctx.moveTo(px-chLen,py); ctx.lineTo(px+chLen,py); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px,py-chLen); ctx.lineTo(px,py+chLen); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.shadowColor = m.color; ctx.shadowBlur = isSel ? 14 : 8;
+    ctx.beginPath(); ctx.arc(px, py, r_dot, 0, Math.PI*2);
+    ctx.fillStyle = m.color; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(px, py, r_dot, 0, Math.PI*2);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    const labelText = m.label;
+    ctx.font = 'bold 11px Share Tech Mono, monospace';
+    const tw = ctx.measureText(labelText).width;
+    const lx = px + r_dot + 6, ly = py - r_dot - 4;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(lx-3, ly-11, tw+6, 14, 3) : ctx.rect(lx-3, ly-11, tw+6, 14);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(labelText, lx, ly);
+
+    if (m.note) {
+      const snippet = m.note.length > 22 ? m.note.slice(0,22)+'…' : m.note;
+      ctx.font = '9px Share Tech Mono, monospace';
+      const nw = ctx.measureText(snippet).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(lx-3, ly+2, nw+6, 12, 3) : ctx.rect(lx-3, ly+2, nw+6, 12);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.textBaseline = 'top';
+      ctx.fillText(snippet, lx, ly+3);
+    }
+
+    if (isSel) {
+      ctx.beginPath(); ctx.arc(px, py, r_dot+7, 0, Math.PI*2);
+      ctx.strokeStyle = m.color; ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  });
+
+  // FOOTER BAR
+  ctx.fillStyle = 'rgba(0,229,255,0.07)';
+  ctx.fillRect(0, CH-32, CW, 32);
+  ctx.strokeStyle = 'rgba(0,229,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,CH-32); ctx.lineTo(CW,CH-32); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '8px Share Tech Mono, monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const gridStr = grid > 0 ? `GRID ${grid}×${grid}  |  ` : '';
+  ctx.fillText(
+    `BOX  T:${box.top}  B:${box.bottom}  L:${box.left}  R:${box.right} ${unit}  |  ${gridStr}MARKS: ${marks.length}`,
+    12, CH-16
+  );
+}
+
+// ── TOUCH on canvas ──
+(function() {
+  const canvas = document.getElementById('boxCanvas');
+
+  function canvasCoords(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    // Use CSS size, not physical pixels, for coordinate math
+    const cx = (clientX - rect.left) * (canvas.width  / dpr / rect.width);
+    const cy = (clientY - rect.top)  * (canvas.height / dpr / rect.height);
+    return { cx, cy };
+  }
+
+  canvas.addEventListener('touchend', function(e) {
+    if (!box) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const { cx, cy } = canvasCoords(touch.clientX, touch.clientY);
+    if (cx >= CV.ox && cx <= CV.ox+CV.bw && cy >= CV.oy && cy <= CV.oy+CV.bh) {
+      addMark(cx, cy);
+    }
+  }, { passive: false });
+
+  // also keep click for desktop
+  canvas.addEventListener('click', function(e) {
+    if (!box) return;
+    const { cx, cy } = canvasCoords(e.clientX, e.clientY);
+    if (cx >= CV.ox && cx <= CV.ox+CV.bw && cy >= CV.oy && cy <= CV.oy+CV.bh) {
+      addMark(cx, cy);
+    }
+  });
+})();
+
+// ── RESET ──
+function resetAll() {
+  if (!confirm('Reset everything?')) return;
+  box = null; grid = 0; marks = []; markCounter = 0; selectedMark = null;
+  ['top','bottom','left','right'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('planesInput').value = '4';
+  document.getElementById('mx').value = '';
+  document.getElementById('my').value = '';
+  document.getElementById('mnote').value = '';
+  document.getElementById('mdiam').value = '0';
+  document.getElementById('statsRow').style.display = 'none';
+  document.getElementById('printBtn').disabled = true;
+  ['gridSection','markSection','marksListSection'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('locked');
+  });
+  // remove done states
+  ['tab-grid','tab-marks','tab-canvas'].forEach(id => {
+    document.getElementById(id)?.classList.remove('done');
+  });
+  updateMarksList();
+  updateMarkStats();
+  setStep(1);
+  const canvas = document.getElementById('boxCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  switchTab('box');
+}
+
+// ── PRINT ──
+function triggerPrint() {
+  const defaultName = 'BoxPlanner_' + (box ? `T${box.top}xB${box.bottom}xL${box.left}xR${box.right}` : 'export');
+  const fileName = prompt('Enter a file name for this print job:', defaultName);
+  if (fileName === null) return; // user cancelled
+  // Set document title so browser uses it as suggested PDF filename
+  const origTitle = document.title;
+  document.title = fileName.trim() || defaultName;
+  window.print();
+  // Restore title after print dialog closes
+  setTimeout(() => { document.title = origTitle; }, 500);
+}
+
+// ── RESIZE ──
+window.addEventListener('resize', () => { if (box) renderCanvas(); });
+</script>
+</body>
+</html>
